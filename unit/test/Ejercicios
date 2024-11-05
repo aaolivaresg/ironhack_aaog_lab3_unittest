@@ -1,0 +1,133 @@
+
+====================================================================================================
+1.-
+====================================================================================================
+
+TEST UserAuthentication
+  ASSERT_TRUE(authenticate("validUser", "validPass"), "Should succeed with correct credentials")
+  ASSERT_FALSE(authenticate("validUser", "wrongPass"), "Should fail with wrong credentials")
+END TEST
+
+El problema que puedo ver acá es que estamos haciendo dos pruebas en una sola.
+Si la primera falla, la segunda no se ejecuta y siguiendo las buena prácticas de pruebas
+deberíamos tener una sola prueba por test case. También veo que podemos modificar las variables
+que usan los test para tener un mejor manejo de los mensajes de error.
+
+INITIALIZE
+  validUser = "validUser"
+  validPass = "validPass"
+  wrongPass = "wrongPass"
+END INITIALIZE
+
+TEST UserAuthenticationWithCorrectCredentials
+  ASSERT_TRUE(authenticate(validUser, validPass), "Should succeed with correct credentials")
+END TEST
+
+TEST UserAuthenticationWithIncorrectCredentials
+  ASSERT_FALSE(authenticate(validUser, wrongPass), "Should fail with wrong credentials")
+END TEST
+
+====================================================================================================
+2.-
+====================================================================================================
+TEST DataProcessing
+  DATA data = fetchData()
+  TRY
+    processData(data)
+    ASSERT_TRUE(data.processedSuccessfully, "Data should be processed successfully")
+  CATCH error
+    ASSERT_EQUALS("Data processing error", error.message, "Should handle processing errors")
+  END TRY
+END TEST
+
+
+para este caso creo que podemos ver que son dos pruebas en una sola, y que podemos mejorarlo
+El fetchData es una función de mockeo de datos, por lo que podríamos crearla y agregar datos de prueba:
+
+
+// Función de prueba para crear datos válidos
+FUNCTION fetchData()
+  RETURN DATA {processedSuccessfully = false}
+END FUNCTION
+
+INITIALIZE
+  data = fetchData()
+END INITIALIZE
+
+
+// Prueba para verificar el procesamiento exitoso de datos válidos
+TEST DataProcessing_SuccessfulProcessing
+
+  processData(data)
+
+  // Assert
+    TRY
+
+        ASSERT_TRUE(data.processedSuccessfully, true)
+    CATCH error
+            ASSERT_EQUALS("Data processing error", error.message, "Should handle processing errors")
+    END TRY
+END TEST
+
+
+// Prueba para verificar el procesamiento erroneo de datos inválidos
+TEST DataProcessing_ErrorHandling
+
+  processData(data)
+
+  // Assert
+    TRY
+
+        ASSERT_TRUE(data.processedSuccessfully, false)
+    CATCH error
+            ASSERT_EQUALS(error.message, "Expected-error-message-failure")
+    END TRY
+END TEST
+
+
+====================================================================================================
+3.-
+====================================================================================================
+
+
+TEST UIResponsiveness
+  UI_COMPONENT uiComponent = setupUIComponent(1024)
+  ASSERT_TRUE(uiComponent.adjustsToScreenSize(1024), "UI should adjust to width of 1024 pixels")
+END TEST
+
+En esta prueba podemos ver que podemos mejorar la inicialización de la 1024 ademas que debemos agregar
+un caso de prueba para verificar prueba exitosa y errorea. Aplicamos de igual forma el principio de responsabilidad
+única para que cada prueba sea independiente.
+
+// Definición de tamaño para reutilización
+SETUP
+  screenWidth1024 = 1024
+  screenWidth_err = 0
+END SETUP
+
+
+// Prueba exitosa
+TEST UIResponsiveness_AdjustsToScreenWidth
+
+  UI_COMPONENT uiComponent = setupUIComponent(screenWidth1024)
+
+  //Assert
+  TRY
+    ASSERT_TRUE(uiComponent.adjustsToScreenSize(screenWidth), "UI should adjust to width of 1024 pixels")
+  CATCH SpecificUIAdjustmentException error
+    FAIL("adjustsToScreenSize threw an unexpected UI adjustment exception: " + error.message)
+  END TRY
+END TEST
+
+// Prueba que detacta el error.
+TEST UIResponsiveness_AdjustsToScreenWidth_error
+
+  UI_COMPONENT uiComponent = setupUIComponent(screenWidth_err)
+
+  //Assert
+  TRY
+    ASSERT_TRUE(uiComponent.adjustsToScreenSize(screenWidth_err), "\"with\" not suported")
+  CATCH SpecificUIAdjustmentException error
+    FAIL("adjustsToScreenSize threw an unexpected UI adjustment exception: " + error.message)
+  END TRY
+END TEST
